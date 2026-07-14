@@ -5,6 +5,8 @@ Rules enforced in code:
 2. Excerpt must appear (normalized) inside that chunk's text.
 3. Non-abstained answers need ≥1 valid citation after filtering.
 4. Confidence below threshold forces abstention.
+5. Inline [cN] markers in answer_text are rewritten to match issued ids
+   after invalid claims are dropped (so UI chips and body stay aligned).
 """
 
 from __future__ import annotations
@@ -21,6 +23,8 @@ INSUFFICIENT_EVIDENCE_MESSAGE = (
 
 DEFAULT_CONFIDENCE_THRESHOLD = 0.55
 
+_MARKER_RE = re.compile(r"\[(c\d+)\]")
+
 
 def _normalize(text: str) -> str:
     """Collapse whitespace for excerpt membership checks."""
@@ -34,6 +38,22 @@ def excerpt_in_chunk(excerpt: str, chunk_text: str) -> bool:
     if not ex or len(ex) < 8:
         return False
     return ex in body
+
+
+def rewrite_citation_markers(answer_text: str, marker_map: dict[str, str]) -> str:
+    """Remap inline [cN] markers after claims were filtered/renumbered.
+
+    Unknown markers are left unchanged (then UI simply won't highlight them).
+    """
+    if not marker_map:
+        return answer_text
+
+    def repl(match: re.Match[str]) -> str:
+        old = match.group(1)
+        new = marker_map.get(old)
+        return f"[{new}]" if new is not None else match.group(0)
+
+    return _MARKER_RE.sub(repl, answer_text)
 
 
 def build_abstained_answer(
@@ -91,20 +111,25 @@ def ground_structured_output(
 
     citations: list[Citation] = []
     seen_chunks: set[str] = set()
+    # Model emits [c1]..[cN] aligned with claim order; after filtering we
+    # renumber densely and rewrite the answer body to match.
+    marker_map: dict[str, str] = {}
+    kept_lines: list[str] = []
+
     for index, claim in enumerate(structured.claims, start=1):
         chunk = by_id.get(claim.chunk_id)
         if chunk is None:
-            # Hallucinated id — structurally rejected.
             continue
         if not excerpt_in_chunk(claim.excerpt, chunk.text):
-            # Excerpt not actually in the chunk — structurally rejected.
             continue
         if chunk.chunk_id in seen_chunks:
             continue
         seen_chunks.add(chunk.chunk_id)
+        new_id = f"c{len(citations) + 1}"
+        marker_map[f"c{index}"] = new_id
         citations.append(
             Citation(
-                citation_id=f"c{index}",
+                citation_id=new_id,
                 chunk_id=chunk.chunk_id,
                 ticker=chunk.ticker,
                 form_type=chunk.form_type,
@@ -115,6 +140,7 @@ def ground_structured_output(
                 source_url=chunk.source_url,
             )
         )
+        kept_lines.append(f"{claim.claim_text.strip()} [{new_id}]")
 
     if not citations:
         return build_abstained_answer(
@@ -124,10 +150,11 @@ def ground_structured_output(
             retrieval=retrieval,
         )
 
-    # Rewrite citation markers in answer_text to match issued citation_ids.
-    answer_text = structured.answer_text.strip() or _compose_answer_from_claims(
-        structured
-    )
+    raw = structured.answer_text.strip()
+    if raw:
+        answer_text = rewrite_citation_markers(raw, marker_map)
+    else:
+        answer_text = " ".join(kept_lines)
 
     return Answer(
         query=query,
@@ -138,11 +165,3 @@ def ground_structured_output(
         abstained=False,
         retrieval=retrieval,
     )
-
-
-def _compose_answer_from_claims(structured: StructuredGeneration) -> str:
-    """Fallback answer text if the model left answer_text empty."""
-    parts: list[str] = []
-    for index, claim in enumerate(structured.claims, start=1):
-        parts.append(f"{claim.claim_text} [c{index}]")
-    return " ".join(parts)

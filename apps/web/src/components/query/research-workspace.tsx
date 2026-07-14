@@ -6,16 +6,14 @@ import { AnswerView } from "@/components/query/answer-view";
 import { CitationDrawer } from "@/components/query/citation-drawer";
 import { QueryInput } from "@/components/query/query-input";
 import { RetrievedChunks } from "@/components/query/retrieved-chunks";
+import { StarterQueries } from "@/components/query/starter-queries";
 import { StrategyToggle } from "@/components/query/strategy-toggle";
 import { Button } from "@/components/ui/button";
 import { postQuery } from "@/lib/api";
 import type { Citation, Chunk, QueryResponse, RetrievalStrategy } from "@/lib/types";
 
 /**
- * Research workspace — search retrieves for free; cited answers are opt-in.
- *
- * Claude spend is budgeted on the API for the public LinkedIn demo. Strategy
- * toggles always re-retrieve only (no generation).
+ * Research workspace — evidence-first instrument with opt-in cited generation.
  */
 export function ResearchWorkspace() {
   const [strategy, setStrategy] = useState<RetrievalStrategy>("hybrid_rerank");
@@ -25,6 +23,7 @@ export function ResearchWorkspace() {
   const [isPending, startTransition] = useTransition();
   const [pendingGenerate, setPendingGenerate] = useState(false);
   const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
+  const [activeChunk, setActiveChunk] = useState<Chunk | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const runQuery = useCallback(
@@ -54,7 +53,6 @@ export function ResearchWorkspace() {
   );
 
   function handleSubmit(query: string) {
-    // Retrieve only — LinkedIn visitors can explore without burning Claude.
     runQuery(query, strategy, false);
   }
 
@@ -66,22 +64,24 @@ export function ResearchWorkspace() {
   function handleStrategyChange(next: RetrievalStrategy) {
     setStrategy(next);
     if (lastQuery) {
-      // Demo moment: re-retrieve so ranked chunks update; skip Claude.
       runQuery(lastQuery, next, false);
     }
   }
 
   function openCitation(citation: Citation) {
     setActiveCitation(citation);
+    const chunk =
+      result?.retrieval?.chunks.find((c) => c.chunk_id === citation.chunk_id) ??
+      null;
+    setActiveChunk(chunk);
     setDrawerOpen(true);
   }
 
-  const activeChunk: Chunk | null =
-    activeCitation && result?.retrieval
-      ? (result.retrieval.chunks.find(
-          (c) => c.chunk_id === activeCitation.chunk_id
-        ) ?? null)
-      : null;
+  function openChunk(chunk: Chunk) {
+    setActiveCitation(null);
+    setActiveChunk(chunk);
+    setDrawerOpen(true);
+  }
 
   const showAnswer =
     !!result &&
@@ -96,112 +96,133 @@ export function ResearchWorkspace() {
     !isPending;
 
   const hasCitedAnswer = showAnswer && !result?.abstained;
+  const hasEvidence = !!result?.retrieval?.chunks.length;
+  const showStarters = !lastQuery && !isPending;
 
   return (
-    <div className="mx-auto w-full max-w-[720px] px-6 py-12 md:py-16">
-      <header className="mb-10">
-        <h1 className="text-[30px] font-semibold tracking-tight text-ink">
-          Prospectus
-        </h1>
-        <p className="mt-2 max-w-xl text-[15px] leading-[1.6] text-ink-muted">
-          Grounded research over SEC filings. Search and compare retrieval
-          configs freely — cited answers use a shared daily budget so the
-          public demo lasts.
-        </p>
-      </header>
-
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <StrategyToggle
-          value={strategy}
-          onChange={handleStrategyChange}
-          disabled={isPending}
-        />
-        {result?.latency_ms != null && (
-          <span className="text-[12px] text-ink-subtle tabular-nums">
-            {Math.round(result.latency_ms)} ms e2e
-            {result.generate && result.confidence > 0 && (
-              <> · confidence {result.confidence.toFixed(2)}</>
-            )}
-          </span>
-        )}
-      </div>
-
-      <QueryInput onSubmit={handleSubmit} disabled={isPending} />
-
-      {isPending && (
-        <p className="mt-6 text-[13px] text-ink-subtle">
-          {pendingGenerate ? "Writing cited answer…" : "Searching filings…"}
-        </p>
-      )}
-
-      {error && (
-        <div className="mt-6 rounded-[6px] border border-border bg-warning-bg px-4 py-3 text-[13px] text-warning">
-          {error}
-        </div>
-      )}
-
-      {canGenerate && !hasCitedAnswer && (
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            onClick={handleGenerate}
-            disabled={isPending}
-            className="rounded-[6px] bg-primary text-primary-foreground hover:bg-[var(--accent-hover)]"
-          >
-            Generate cited answer
-          </Button>
-          <p className="text-[12px] text-ink-subtle">
-            Uses Claude (limited per visitor / day). Retrieval above is free.
+    <div className="paper-shell flex-1">
+      <div className="mx-auto w-full max-w-[1200px] px-6 py-10 md:py-14">
+        <header className="mb-8 max-w-2xl">
+          <p className="text-[12px] font-medium tracking-wide text-primary uppercase">
+            SEC research instrument
           </p>
-        </div>
-      )}
+          <h1 className="mt-2 text-[30px] font-semibold tracking-tight text-ink md:text-[34px]">
+            Ask filings. Compare retrieval. Cite everything.
+          </h1>
+          <p className="mt-3 text-[15px] leading-[1.6] text-ink-muted">
+            Search and toggle dense · hybrid · hybrid+rerank for free. Cited
+            answers are opt-in and budgeted so the public demo lasts.
+          </p>
+        </header>
 
-      {showAnswer && (
-        <section className="mt-10">
-          <h2 className="mb-3 text-[13px] font-medium tracking-wide text-ink-subtle uppercase">
-            Answer
-          </h2>
-          <AnswerView
-            answerText={result.answer_text}
-            citations={result.citations}
-            abstained={result.abstained}
-            onCitationClick={openCitation}
-            activeCitationId={activeCitation?.citation_id}
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+          <StrategyToggle
+            value={strategy}
+            onChange={handleStrategyChange}
+            disabled={isPending}
           />
-          {!result.abstained && result.citations.length > 0 && (
-            <ul className="mt-6 flex flex-wrap gap-2">
-              {result.citations.map((c) => (
-                <li key={c.citation_id}>
-                  <button
-                    type="button"
-                    onClick={() => openCitation(c)}
-                    className="rounded-[4px] border border-border bg-surface px-2 py-1 text-[12px] text-citation hover:bg-citation-bg"
-                  >
-                    [{c.citation_id}] {c.ticker} · {c.section_title}
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {result?.latency_ms != null && (
+            <span className="text-[12px] text-ink-subtle tabular-nums">
+              {Math.round(result.latency_ms)} ms e2e
+              {result.generate && result.confidence > 0 && (
+                <> · confidence {result.confidence.toFixed(2)}</>
+              )}
+            </span>
           )}
-        </section>
-      )}
+        </div>
 
-      {!result?.generate && lastQuery && result?.retrieval && (
-        <p className="mt-8 text-[13px] text-ink-muted">
-          Showing retrieval for{" "}
-          <span className="font-medium text-ink">{strategy}</span> — toggle
-          configs to compare ranking, or generate a cited answer.
-        </p>
-      )}
+        <div className="max-w-2xl">
+          <QueryInput onSubmit={handleSubmit} disabled={isPending} />
+        </div>
 
-      <RetrievedChunks retrieval={result?.retrieval ?? null} />
+        {showStarters && (
+          <div className="max-w-2xl">
+            <StarterQueries onSelect={handleSubmit} disabled={isPending} />
+          </div>
+        )}
 
-      <CitationDrawer
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        citation={activeCitation}
-        chunk={activeChunk}
-      />
+        {error && (
+          <div className="mt-6 max-w-2xl rounded-[6px] border border-border bg-warning-bg px-4 py-3 text-[13px] text-warning">
+            {error}
+          </div>
+        )}
+
+        {(hasEvidence || isPending || showAnswer) && (
+          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-12">
+            <div className="min-w-0">
+              <RetrievedChunks
+                retrieval={result?.retrieval ?? null}
+                onChunkClick={openChunk}
+                activeChunkId={activeChunk?.chunk_id}
+                loading={isPending && !pendingGenerate && !hasEvidence}
+              />
+              {!result?.generate && hasEvidence && !isPending && (
+                <p className="mt-4 text-[13px] text-ink-muted">
+                  Showing retrieval for{" "}
+                  <span className="font-medium text-ink">{strategy}</span>.
+                  Toggle configs to compare ranking, or generate a cited answer.
+                </p>
+              )}
+            </div>
+
+            <div className="min-w-0 lg:border-l lg:border-border lg:pl-12">
+              {canGenerate && !hasCitedAnswer && (
+                <div className="mb-6 flex flex-wrap items-center gap-3">
+                  <Button
+                    type="button"
+                    onClick={handleGenerate}
+                    disabled={isPending}
+                    className="rounded-[6px] bg-primary text-primary-foreground hover:bg-[var(--accent-hover)]"
+                  >
+                    Generate cited answer
+                  </Button>
+                  <p className="text-[12px] text-ink-subtle">
+                    Uses Claude · limited per visitor / day
+                  </p>
+                </div>
+              )}
+
+              {isPending && pendingGenerate && (
+                <p className="mb-4 text-[13px] text-ink-subtle">
+                  Writing cited answer…
+                </p>
+              )}
+
+              {showAnswer && result && (
+                <section>
+                  <h2 className="mb-3 text-[13px] font-medium tracking-wide text-ink-subtle uppercase">
+                    Answer
+                  </h2>
+                  <AnswerView
+                    answerText={result.answer_text}
+                    citations={result.citations}
+                    abstained={result.abstained}
+                    onCitationClick={openCitation}
+                    activeCitationId={activeCitation?.citation_id}
+                  />
+                </section>
+              )}
+
+              {!showAnswer && !pendingGenerate && hasEvidence && (
+                <div className="rounded-[6px] border border-dashed border-border bg-surface-subtle/50 px-4 py-5">
+                  <p className="text-[13px] leading-[1.55] text-ink-muted">
+                    Evidence is ranked on the left. Open any chunk for the full
+                    filing passage, or generate a cited answer when you want
+                    synthesis.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <CitationDrawer
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          citation={activeCitation}
+          chunk={activeChunk}
+        />
+      </div>
     </div>
   );
 }

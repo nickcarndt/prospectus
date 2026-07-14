@@ -26,6 +26,8 @@ opt-in in the UI and budgeted on the API (`GENERATE_PER_IP_PER_DAY=3`,
 | Frontend | Next.js App Router · shadcn/ui · Tremor (eval charts) |
 | Deploy | API → Railway · Web → Vercel |
 
+Staff-level portfolio review: [`docs/STAFF_AUDIT.md`](docs/STAFF_AUDIT.md).
+
 ## Local run
 
 ### 1. Postgres
@@ -51,25 +53,36 @@ Frontend (`apps/web/.env.local`):
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### 3. Python API
+### 3. Ingest + embed (required before queries return evidence)
+
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r services/ingest/requirements.txt
+pip install -e packages/shared -e packages/retrieval -e packages/generation
+# SEC_USER_AGENT and API keys must be set in .env
+PYTHONPATH=services/ingest python -m prospectus_ingest fetch
+PYTHONPATH=services/ingest python -m prospectus_ingest extract
+PYTHONPATH=services/ingest python -m prospectus_ingest chunk
+PYTHONPATH=packages/retrieval python -m prospectus_retrieval embed
+```
+
+### 4. Python API
 
 ```bash
 # from repo root
-source .venv/bin/activate   # or python -m venv .venv
-pip install -e packages/shared -e packages/retrieval -e packages/generation
+source .venv/bin/activate
 pip install -r services/api/requirements.txt
 
-cd services/api
-PYTHONPATH=. uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --app-dir services/api --reload --port 8000
 ```
 
 Smoke: `curl -s http://localhost:8000/health`
 
-### 4. Web
+### 5. Web
 
 ```bash
 cd apps/web
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
 

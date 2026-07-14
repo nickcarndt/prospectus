@@ -15,8 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prospectus",
-  description: "Hybrid-retrieval research over SEC filings.",
+  title: "Prospectus — grounded SEC research",
+  description:
+    "Hybrid-retrieval research over SEC 10-K/10-Q filings with citations, abstention, and live dense vs hybrid vs rerank comparison.",
+  openGraph: {
+    title: "Prospectus",
+    description:
+      "Ask SEC filings. Compare retrieval configs. Cite everything — or abstain.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

@@ -7,6 +7,7 @@ per leg (spec: dense top-50 + keyword top-50), then RRF, then truncate to top_k.
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from prospectus_shared import RetrievalResult, RetrievalStrategy
 
@@ -46,8 +47,16 @@ def hybrid_retrieve(
 
     started = time.perf_counter()
 
-    dense = dense_retrieve(query, top_k=candidate_depth, embedder=embedder)
-    keyword = keyword_retrieve(query, top_k=candidate_depth)
+    # Dense (network embed + ANN) and keyword (FTS) are independent — overlap them.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        dense_fut = pool.submit(
+            dense_retrieve, query, top_k=candidate_depth, embedder=embedder
+        )
+        keyword_fut = pool.submit(
+            keyword_retrieve, query, top_k=candidate_depth
+        )
+        dense = dense_fut.result()
+        keyword = keyword_fut.result()
 
     chunks, scores = reciprocal_rank_fusion(
         [dense.chunks, keyword.chunks],

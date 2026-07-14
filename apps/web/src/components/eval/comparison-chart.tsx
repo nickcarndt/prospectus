@@ -41,7 +41,7 @@ export function ComparisonChart({
         data={data}
         index="metric"
         categories={["dense", "hybrid", "hybrid_rerank"]}
-        colors={["blue", "emerald", "slate"]}
+        colors={["indigo", "emerald", "gray"]}
         valueFormatter={formatter(format)}
         yAxisWidth={48}
         showAnimation

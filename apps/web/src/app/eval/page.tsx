@@ -20,6 +20,7 @@ export default function EvalReportPage() {
   const retrieval = report.retrieval_only;
   const gen = report.generation_partial;
 
+  // Lead with complete retrieval metrics — incomplete generation stays in the appendix.
   const tableRows = [
     {
       label: "Recall@5",
@@ -40,40 +41,16 @@ export default function EvalReportPage() {
       hybrid_rerank: display.mrr.hybrid_rerank,
     },
     {
-      label: "Faithfulness",
-      dense: display.faithfulness.dense,
-      hybrid: display.faithfulness.hybrid,
-      hybrid_rerank: display.faithfulness.hybrid_rerank,
-    },
-    {
-      label: "Citation accuracy",
-      dense: display.citation_accuracy.dense,
-      hybrid: display.citation_accuracy.hybrid,
-      hybrid_rerank: display.citation_accuracy.hybrid_rerank,
-    },
-    {
       label: "p95 latency — retrieval (ms)",
       dense: display.p95_latency_ms_retrieval.dense,
       hybrid: display.p95_latency_ms_retrieval.hybrid,
       hybrid_rerank: display.p95_latency_ms_retrieval.hybrid_rerank,
     },
     {
-      label: "p95 latency — e2e (ms)",
-      dense: display.p95_latency_ms_e2e.dense,
-      hybrid: display.p95_latency_ms_e2e.hybrid,
-      hybrid_rerank: display.p95_latency_ms_e2e.hybrid_rerank,
-    },
-    {
       label: "Cost $/q — retrieval",
       dense: display.cost_usd_per_query_retrieval.dense,
       hybrid: display.cost_usd_per_query_retrieval.hybrid,
       hybrid_rerank: display.cost_usd_per_query_retrieval.hybrid_rerank,
-    },
-    {
-      label: "Cost $/q — e2e",
-      dense: display.cost_usd_per_query_e2e.dense,
-      hybrid: display.cost_usd_per_query_e2e.hybrid,
-      hybrid_rerank: display.cost_usd_per_query_e2e.hybrid_rerank,
     },
   ];
 
@@ -122,26 +99,27 @@ export default function EvalReportPage() {
   const configs: ConfigKey[] = ["dense", "hybrid", "hybrid_rerank"];
 
   return (
-    <main className="mx-auto w-full max-w-[960px] px-6 py-12 md:py-16">
+    <main className="paper-shell mx-auto w-full max-w-[960px] flex-1 px-6 py-12 md:py-16">
       <header className="mb-10 max-w-2xl">
-        <p className="text-[12px] font-medium tracking-wide text-ink-subtle uppercase">
+        <p className="text-[12px] font-medium tracking-wide text-primary uppercase">
           Eval report
         </p>
         <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-ink">
-          Three-config comparison
+          Retrieval configs, head-to-head
         </h1>
         <p className="mt-3 text-[15px] leading-[1.6] text-ink-muted">
-          Head-to-head on the labeled SEC set (n={report.eval_set_n},
-          candidate_depth={report.candidate_depth}). Numbers from{" "}
-          <code className="font-mono text-[12px] text-ink">
-            phase8_report_source.json
-          </code>
-          . Generation incomplete for hybrid configs — shown as n/a, not zero.
+          Complete retrieval numbers on the labeled SEC set (n=
+          {report.eval_set_n}, candidate_depth={report.candidate_depth}). Dense
+          leads MRR on this gold set; hybrid shines on rare exact tokens (see
+          CoWoS in the research UI). Generation metrics are partial — appendix
+          only.
         </p>
       </header>
 
       <section className="mb-12">
-        <h2 className="mb-4 text-[20px] font-semibold text-ink">Metrics</h2>
+        <h2 className="mb-4 text-[20px] font-semibold text-ink">
+          Retrieval metrics
+        </h2>
         <MetricsTable rows={tableRows} />
       </section>
 
@@ -162,12 +140,13 @@ export default function EvalReportPage() {
 
       <section className="mb-12">
         <h2 className="mb-3 text-[20px] font-semibold text-ink">
-          Generation (partial)
+          Appendix — generation (partial)
         </h2>
         <p className="mb-4 max-w-2xl text-[15px] leading-[1.6] text-ink-muted">
-          Dense e2e ran through n={gen.dense?.n ?? "—"} before Anthropic credits
-          exhausted. Hybrid / hybrid_rerank generation:{" "}
-          <span className="text-ink">n/a (API credits)</span>.
+          Dense e2e completed for n={gen.dense?.n ?? "—"} before credits ran
+          out. Hybrid / hybrid_rerank generation was not finished — reported as
+          n/a, not zero. Full write-up in{" "}
+          <code className="font-mono text-[12px]">EVAL_REPORT.md</code>.
         </p>
         <dl className="grid gap-3 sm:grid-cols-3">
           {configs.map((key) => {
