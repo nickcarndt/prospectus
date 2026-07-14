@@ -1,0 +1,44 @@
+# Project: Prospectus — hybrid-retrieval research system over SEC filings with a published eval report
+
+## How to work with me
+- Senior engineer pair-programming with me, teaching as you go.
+- Before significant code: explain WHAT and WHY (and why not the alternatives).
+- After: explain non-obvious lines. Define unfamiliar libraries in one sentence.
+- Tight explanations. I move fast but I understand everything before we proceed.
+- Build in small phases. Do NOT build ahead. Pause after each piece.
+- Tell me if I'm about to do something suboptimal.
+
+## The discipline gate (NON-NEGOTIABLE)
+At the end of every phase, ask me to narrate back in 2-3 sentences what you just built and
+why it exists. If I can't, we stop and I read the code until I can. Do not proceed without this.
+
+## Stack (do not deviate without telling me why)
+- Python (ingest, retrieval, evals), FastAPI for the API
+- Postgres + pgvector (dense) + Postgres full-text search (keyword)
+- Embeddings: OpenAI text-embedding-3-large
+- Reranker: Cohere Rerank
+- Fusion: Reciprocal Rank Fusion (RRF), k=60
+- Generation: Claude with structured output for citations
+- Evals + tracing: Braintrust
+- Frontend: Next.js (App Router) + Vercel AI SDK + shadcn/ui + Tailwind
+- Deploy: API on Railway, frontend on Vercel
+
+## Architectural principles (the project lives or dies on these)
+1. **Retrieval strategy is a PARAMETER, not a code path.** dense | hybrid | hybrid+rerank
+   must be swappable via config. The whole point is comparing them.
+2. Each retrieval stage (dense, keyword, fusion, rerank) is an independently testable module.
+3. **Every answer carries citations.** An answer without a citation is a bug.
+4. **The system abstains.** Below a confidence threshold it says "insufficient evidence" —
+   it does not guess. Hallucinating under uncertainty is a bug, not a feature.
+5. Every number in EVAL_REPORT.md must be reproducible from a script. No hand-typed metrics.
+
+## Code standards
+- Type everything (Python type hints, TypeScript strict)
+- Validate all external inputs with schemas (pydantic / zod)
+- Docstrings on all functions
+- No secrets in code — env vars only, .env gitignored
+
+## Design standards
+- Follow docs/DESIGN_SPEC.md. UI is first-class.
+- Premium research-tool feel (Perplexity/Hebbia), not a chatbot.
+- Citations are visually prominent and clickable — grounding IS the product.

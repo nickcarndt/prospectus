@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: prospectus-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: prospectus
+      POSTGRES_PASSWORD: prospectus
+      POSTGRES_DB: prospectus
+    volumes:
+      - prospectus_pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prospectus -d prospectus"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  prospectus_pgdata:

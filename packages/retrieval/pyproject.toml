@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prospectus-retrieval"
+version = "0.1.0"
+description = "Retrieval strategies for Prospectus (dense, hybrid, hybrid+rerank)."
+requires-python = ">=3.11"
+dependencies = [
+  "prospectus-shared",
+  "openai>=1.40.0",
+  "cohere>=5.0.0",
+  "psycopg[binary,pool]>=3.2.0",
+  "pgvector>=0.3.0",
+  "pydantic>=2.7",
+  "python-dotenv>=1.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["prospectus_retrieval*"]

@@ -1,0 +1,155 @@
+{
+  "report": "EVAL_REPORT.md",
+  "generated_at": "2026-07-14T20:31:38.584286+00:00",
+  "candidate_depth": 50,
+  "eval_set_n": 35,
+  "sources": {
+    "dense_hybrid_retrieval": "data/eval/results/partial_dense_hybrid.json",
+    "hybrid_rerank_retrieval": "data/eval/results/latest_retrieval_only.json",
+    "hybrid_rerank_retrieval_dated": "data/eval/results/retrieval_only_20260714T203034Z.json",
+    "dense_generation_partial_log": "data/eval/results/run_full.log"
+  },
+  "limitations": {
+    "generation_incomplete": true,
+    "anthropic_credits_exhausted": true,
+    "hybrid_generation": "n/a (API credits)",
+    "hybrid_rerank_generation": "n/a (API credits)",
+    "dense_generation_n": 29,
+    "dense_e2e_cost_usd": "n/a (not persisted for n=29 partial; only latency/cite/faith in log)"
+  },
+  "retrieval_only": {
+    "dense": {
+      "n": 35,
+      "recall_at_5": 0.8285714285714286,
+      "recall_at_10": 0.8285714285714286,
+      "mrr": 0.6838,
+      "latency_ms_mean": 536.1428571428571,
+      "latency_ms_p95": 676.0,
+      "cost_usd_mean_retrieval": 5.2e-06,
+      "cost_note": "embedding-only estimate from eval cost breakdown (same as hybrid_rerank.embedding_usd)"
+    },
+    "hybrid": {
+      "n": 35,
+      "recall_at_5": 0.8285714285714286,
+      "recall_at_10": 0.8285714285714286,
+      "mrr": 0.6242571428571428,
+      "latency_ms_mean": 359.45714285714286,
+      "latency_ms_p95": 435.0,
+      "cost_usd_mean_retrieval": 5.2e-06,
+      "cost_note": "embedding-only estimate from eval cost breakdown (FTS has no API $)"
+    },
+    "hybrid_rerank": {
+      "n": 35,
+      "recall_at_5": 0.8285714285714286,
+      "recall_at_10": 0.8285714285714286,
+      "mrr": 0.62,
+      "latency_ms_mean": 1054.6391213986292,
+      "latency_ms_p95": 1725.6019999913406,
+      "cost_usd_mean_retrieval": 0.0010052,
+      "created_at": "2026-07-14T20:30:34.536059+00:00",
+      "mode": "retrieval_only"
+    }
+  },
+  "generation_partial": {
+    "dense": {
+      "n": 29,
+      "citation_accuracy": 1.0,
+      "faithfulness": 0.8620689655172413,
+      "latency_ms_mean": 17646.310344827587,
+      "latency_ms_p95": 31201.0,
+      "cost_usd_mean": null,
+      "note": "Partial dense end-to-end run (generation + faithfulness). Stopped after case crm-ai-29 when Anthropic credits exhausted. Parsed from data/eval/results/run_full.log.",
+      "case_ids": [
+        "nvda-cowos-01",
+        "nvda-fabless-02",
+        "nvda-risk-supply-03",
+        "amd-tsmc-04",
+        "amd-cyber-05",
+        "aapl-hq-06",
+        "aapl-dma-07",
+        "aapl-10b5-08",
+        "tsla-fsd-09",
+        "tsla-asc606-10",
+        "msft-azure-11",
+        "googl-yt-12",
+        "amzn-aws-13",
+        "meta-rl-14",
+        "crm-agentforce-15",
+        "orcl-cloud-16",
+        "ma-biz-17",
+        "v-payments-18",
+        "jpm-credit-19",
+        "nflx-content-20",
+        "nvda-cowos-21",
+        "amd-tsmc-22",
+        "aapl-hq-23",
+        "tsla-fsd-24",
+        "meta-rl-25",
+        "amzn-aws-26",
+        "googl-ads-27",
+        "msft-cloud-28",
+        "crm-ai-29"
+      ]
+    },
+    "hybrid": null,
+    "hybrid_rerank": null
+  },
+  "qualitative_demos": {
+    "phase4_cowos": {
+      "query": "CoWoS packaging",
+      "finding": "dense: CoWoS not in top-10 (nor top-50); keyword: #1; hybrid: #2. Exact rare token where hybrid helps even if aggregate Recall@k ties."
+    },
+    "phase5_cowos_rerank": {
+      "query": "What did NVIDIA say about CoWoS packaging and supply chain risk?",
+      "finding": "hybrid (no rerank): no CoWoS in top-8; hybrid_rerank: CoWoS chunks at #1/#2."
+    }
+  },
+  "table_display": {
+    "recall_at_5": {
+      "dense": 0.829,
+      "hybrid": 0.829,
+      "hybrid_rerank": 0.829
+    },
+    "recall_at_10": {
+      "dense": 0.829,
+      "hybrid": 0.829,
+      "hybrid_rerank": 0.829
+    },
+    "mrr": {
+      "dense": 0.684,
+      "hybrid": 0.624,
+      "hybrid_rerank": 0.62
+    },
+    "faithfulness": {
+      "dense": 0.862,
+      "hybrid": "n/a (API credits)",
+      "hybrid_rerank": "n/a (API credits)"
+    },
+    "citation_accuracy": {
+      "dense": 1.0,
+      "hybrid": "n/a (API credits)",
+      "hybrid_rerank": "n/a (API credits)"
+    },
+    "p95_latency_ms_retrieval": {
+      "dense": 676.0,
+      "hybrid": 435.0,
+      "hybrid_rerank": 1726.0
+    },
+    "p95_latency_ms_e2e": {
+      "dense": 31201.0,
+      "hybrid": "n/a (API credits)",
+      "hybrid_rerank": "n/a (API credits)",
+      "note": "dense e2e from n=29 generation subset; retrieval p95 is separate row above"
+    },
+    "cost_usd_per_query_retrieval": {
+      "dense": 5.2e-06,
+      "hybrid": 5.2e-06,
+      "hybrid_rerank": 0.00101
+    },
+    "cost_usd_per_query_e2e": {
+      "dense": "n/a (not persisted for n=29 partial)",
+      "hybrid": "n/a (API credits)",
+      "hybrid_rerank": "n/a (API credits)"
+    }
+  }
+}

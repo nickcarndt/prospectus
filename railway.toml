@@ -1,0 +1,15 @@
+# Prospectus API — Railway
+# Root directory for deploy should be the repo root (see Dockerfile).
+# Set env vars in Railway dashboard (never commit secrets):
+#   DATABASE_URL, OPENAI_API_KEY, COHERE_API_KEY, ANTHROPIC_API_KEY,
+#   SEC_USER_AGENT, CORS_ORIGINS (comma-separated production frontends)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
