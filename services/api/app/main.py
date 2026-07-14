@@ -11,7 +11,11 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from prospectus_generation.answer import answer_query
-from prospectus_generation.grounding import build_abstained_answer
+from prospectus_generation.grounding import (
+    build_abstained_answer,
+    ground_structured_output,
+)
+from prospectus_generation.llm_schema import StructuredGeneration
 from prospectus_retrieval.hybrid import DEFAULT_CANDIDATE_DEPTH
 from prospectus_retrieval.retrieve import retrieve
 from prospectus_shared import Answer, Citation, RetrievalResult, RetrievalStrategy
@@ -28,6 +32,16 @@ EvalStrategy = Literal["dense", "hybrid", "hybrid_rerank"]
 
 # Keep generation prompts smaller on the public demo (input tokens dominate cost).
 _GENERATE_TOP_K_CAP = 6
+# Cap retrieval too — otherwise hybrid_rerank + wide candidate_depth amplifies
+# OpenAI/Cohere spend on an unauthenticated public API.
+_RETRIEVAL_TOP_K_CAP = 20
+_RETRIEVAL_CANDIDATE_DEPTH_CAP = 50
+
+# Production browser origins only (no *.vercel.app wildcard).
+_DEFAULT_PRODUCTION_ORIGINS = (
+    "https://prospectus-nickarndt.vercel.app",
+    "https://web-drab-phi-91.vercel.app",
+)
 
 
 class HealthResponse(BaseModel):
@@ -41,8 +55,12 @@ class QueryRequest(BaseModel):
 
     query: str = Field(..., min_length=1, max_length=4000)
     strategy: EvalStrategy = "hybrid_rerank"
-    top_k: int | None = Field(default=None, ge=1, le=50)
-    candidate_depth: int = Field(default=DEFAULT_CANDIDATE_DEPTH, ge=5, le=100)
+    top_k: int | None = Field(default=None, ge=1, le=_RETRIEVAL_TOP_K_CAP)
+    candidate_depth: int = Field(
+        default=DEFAULT_CANDIDATE_DEPTH,
+        ge=5,
+        le=_RETRIEVAL_CANDIDATE_DEPTH_CAP,
+    )
     generate: bool = Field(
         default=False,
         description=(
@@ -84,17 +102,39 @@ class QueryResponse(BaseModel):
         default=None,
         description="Set when generation failed; retrieval may still be present.",
     )
+    per_ip_remaining: int = Field(
+        default=0,
+        ge=0,
+        description="Cited answers left today for this visitor IP.",
+    )
+    global_remaining: int = Field(
+        default=0,
+        ge=0,
+        description="Cited answers left today on the shared demo budget.",
+    )
 
 
 def _cors_origins() -> list[str]:
-    """Local Next.js + optional Vercel origins from CORS_ORIGINS env."""
+    """Explicit browser origins only — no wildcard regex.
+
+    Defaults: local Next.js + known production aliases. Extra origins via
+    comma-separated CORS_ORIGINS (e.g. a new custom domain).
+    """
     defaults = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        *_DEFAULT_PRODUCTION_ORIGINS,
     ]
     extra = os.getenv("CORS_ORIGINS", "")
     parsed = [origin.strip() for origin in extra.split(",") if origin.strip()]
-    return defaults + parsed
+    # Preserve order, drop duplicates.
+    seen: set[str] = set()
+    origins: list[str] = []
+    for origin in defaults + parsed:
+        if origin not in seen:
+            seen.add(origin)
+            origins.append(origin)
+    return origins
 
 
 def _client_key(request: Request) -> str:
@@ -117,17 +157,46 @@ def _generation_top_k(requested: int | None) -> int:
     return max(1, min(requested, _GENERATE_TOP_K_CAP))
 
 
+def _retrieval_top_k(requested: int | None) -> int | None:
+    """Clamp client top_k on the retrieval path (None → strategy default)."""
+    if requested is None:
+        return None
+    return max(1, min(requested, _RETRIEVAL_TOP_K_CAP))
+
+
+def _retrieval_candidate_depth(requested: int) -> int:
+    """Clamp hybrid/rerank wide-retrieve depth."""
+    return max(5, min(requested, _RETRIEVAL_CANDIDATE_DEPTH_CAP))
+
+
+class ReserveResponse(BaseModel):
+    """Result of consuming one generation budget slot."""
+
+    allowed: bool
+    reason: str | None = None
+    per_ip_remaining: int = 0
+    global_remaining: int = 0
+
+
+class GroundRequest(BaseModel):
+    """Structured model output + retrieval for server-side grounding."""
+
+    query: str = Field(..., min_length=1, max_length=4000)
+    strategy: EvalStrategy
+    structured: StructuredGeneration
+    retrieval: RetrievalResult
+
+
 app = FastAPI(
     title="Prospectus API",
     description="Hybrid-retrieval research API over SEC filings.",
-    version="0.8.1",
+    version="0.8.4",
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -145,8 +214,10 @@ def _answer_to_response(
     latency_ms: float,
     generate: bool,
     error: str | None = None,
+    client_key: str = "unknown",
 ) -> QueryResponse:
-    """Map shared Answer → API QueryResponse."""
+    """Map shared Answer → API QueryResponse (includes live budget remaining)."""
+    budget = generate_budget.peek(client_key)
     return QueryResponse(
         query=answer.query,
         strategy=answer.strategy,
@@ -158,6 +229,8 @@ def _answer_to_response(
         latency_ms=latency_ms,
         generate=generate,
         error=error,
+        per_ip_remaining=budget.per_ip_remaining,
+        global_remaining=budget.global_remaining,
     )
 
 
@@ -181,9 +254,12 @@ def _retrieve_only(
     top_k: int | None,
     candidate_depth: int,
     started: float,
+    client_key: str,
     error: str | None = None,
 ) -> QueryResponse:
     """Run retrieval without Claude (always allowed for the public demo)."""
+    top_k = _retrieval_top_k(top_k)
+    candidate_depth = _retrieval_candidate_depth(candidate_depth)
     try:
         retrieval = retrieve(
             query,
@@ -205,7 +281,53 @@ def _retrieve_only(
     )
     latency_ms = (time.perf_counter() - started) * 1000
     return _answer_to_response(
-        answer, latency_ms=latency_ms, generate=False, error=error
+        answer,
+        latency_ms=latency_ms,
+        generate=False,
+        error=error,
+        client_key=client_key,
+    )
+
+
+@app.post("/generate/reserve", response_model=ReserveResponse)
+def reserve_generation(request: Request) -> ReserveResponse:
+    """Consume one Claude generation slot for this client IP.
+
+    The Next.js AI SDK route streams Anthropic from Vercel; the browser calls
+    this first so per-IP / global daily budgets still key off the visitor, not
+    the Vercel edge IP.
+    """
+    decision = generate_budget.check_and_consume(_client_key(request))
+    return ReserveResponse(
+        allowed=decision.allowed,
+        reason=decision.reason,
+        per_ip_remaining=decision.per_ip_remaining,
+        global_remaining=decision.global_remaining,
+    )
+
+
+@app.post("/ground", response_model=QueryResponse)
+def ground_endpoint(body: GroundRequest, request: Request) -> QueryResponse:
+    """Apply structural grounding to a streamed StructuredGeneration.
+
+    Excerpt membership + closed chunk_id set stay in Python so the AI SDK
+    path cannot bypass the product invariants.
+    """
+    started = time.perf_counter()
+    strategy = RetrievalStrategy(body.strategy)
+    answer = ground_structured_output(
+        body.structured,
+        query=body.query,
+        strategy=strategy,
+        evidence=body.retrieval.chunks,
+        retrieval=body.retrieval,
+    )
+    latency_ms = (time.perf_counter() - started) * 1000
+    return _answer_to_response(
+        answer,
+        latency_ms=latency_ms,
+        generate=True,
+        client_key=_client_key(request),
     )
 
 
@@ -220,39 +342,47 @@ def query_endpoint(body: QueryRequest, request: Request) -> QueryResponse:
     """
     strategy = RetrievalStrategy(body.strategy)
     started = time.perf_counter()
+    top_k = _retrieval_top_k(body.top_k)
+    candidate_depth = _retrieval_candidate_depth(body.candidate_depth)
+    client_key = _client_key(request)
 
     if not body.generate:
         return _retrieve_only(
             query=body.query,
             strategy=strategy,
-            top_k=body.top_k,
-            candidate_depth=body.candidate_depth,
+            top_k=top_k,
+            candidate_depth=candidate_depth,
             started=started,
+            client_key=client_key,
         )
 
-    decision = generate_budget.check_and_consume(_client_key(request))
+    decision = generate_budget.check_and_consume(client_key)
     if not decision.allowed:
         # Soft deny: keep the research demo useful without spending credits.
         return _retrieve_only(
             query=body.query,
             strategy=strategy,
-            top_k=body.top_k,
-            candidate_depth=body.candidate_depth,
+            top_k=top_k,
+            candidate_depth=candidate_depth,
             started=started,
+            client_key=client_key,
             error=decision.reason,
         )
 
-    gen_top_k = _generation_top_k(body.top_k)
+    gen_top_k = _generation_top_k(top_k)
     try:
         answer = answer_query(
             body.query,
             strategy=strategy,
             top_k=gen_top_k,
-            candidate_depth=body.candidate_depth,
+            candidate_depth=candidate_depth,
         )
         latency_ms = (time.perf_counter() - started) * 1000
         return _answer_to_response(
-            answer, latency_ms=latency_ms, generate=True
+            answer,
+            latency_ms=latency_ms,
+            generate=True,
+            client_key=client_key,
         )
     except Exception as exc:  # noqa: BLE001 — surface provider/DB errors cleanly
         message = str(exc)
@@ -260,8 +390,8 @@ def query_endpoint(body: QueryRequest, request: Request) -> QueryResponse:
             retrieval = retrieve(
                 body.query,
                 strategy=strategy,
-                top_k=body.top_k,
-                candidate_depth=body.candidate_depth,
+                top_k=top_k if top_k is not None else _RETRIEVAL_TOP_K_CAP,
+                candidate_depth=candidate_depth,
             )
         except Exception as retrieve_exc:  # noqa: BLE001
             raise HTTPException(
@@ -286,4 +416,5 @@ def query_endpoint(body: QueryRequest, request: Request) -> QueryResponse:
             latency_ms=latency_ms,
             generate=True,
             error=_friendly_generation_error(message),
+            client_key=client_key,
         )

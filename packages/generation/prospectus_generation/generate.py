@@ -101,25 +101,40 @@ def generate_structured(
         "aligned with the order of claims. Prefer abstain over speculation."
     )
 
-    parsed = anthropic_client.messages.parse(
-        model=resolved_model,
-        max_tokens=resolved_max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-        output_format=StructuredGeneration,
-    )
-    structured = parsed.parsed_output
-    if structured is None:
-        return StructuredGeneration(
-            abstain=True,
-            confidence=0.0,
-            answer_text=(
-                "I don't have enough evidence in these filings to answer "
-                "that confidently."
-            ),
-            claims=[],
-        )
-    return structured
+    # Truncated JSON (hit max_tokens mid-string) is a ValidationError — retry
+    # once with a larger cap so eval suites don't die on a single long answer.
+    attempt_tokens = resolved_max_tokens
+    last_exc: Exception | None = None
+    for _ in range(2):
+        try:
+            parsed = anthropic_client.messages.parse(
+                model=resolved_model,
+                max_tokens=attempt_tokens,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+                output_format=StructuredGeneration,
+            )
+            structured = parsed.parsed_output
+            if structured is None:
+                return StructuredGeneration(
+                    abstain=True,
+                    confidence=0.0,
+                    answer_text=(
+                        "I don't have enough evidence in these filings to answer "
+                        "that confidently."
+                    ),
+                    claims=[],
+                )
+            return structured
+        except Exception as exc:  # noqa: BLE001 — retry only parse/truncation
+            last_exc = exc
+            msg = str(exc).lower()
+            if "json" in msg or "eof" in msg or "validation" in msg:
+                attempt_tokens = min(attempt_tokens * 2, 4096)
+                continue
+            raise
+    assert last_exc is not None
+    raise last_exc
 
 
 def generate_from_retrieval(

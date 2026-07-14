@@ -41,10 +41,12 @@ def _cmd_run(args: argparse.Namespace) -> int:
     print("\n=== Aggregate ===")
     for name, payload in summary["strategies"].items():
         agg = payload["aggregate"]
+        faith = agg.get("faithfulness")
+        faith_s = f"{faith:.3f}" if isinstance(faith, (int, float)) else "n/a"
         print(
             f"{name:14} r@5={agg['recall_at_5']:.3f} r@10={agg['recall_at_10']:.3f} "
             f"mrr={agg['mrr']:.3f} cite={agg['citation_accuracy']:.3f} "
-            f"faith={agg.get('faithfulness', 0):.3f} "
+            f"faith={faith_s} "
             f"p95={agg['latency_ms_p95']:.0f}ms "
             f"$/q={agg['cost_usd_mean']:.4f}"
         )

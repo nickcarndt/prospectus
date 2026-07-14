@@ -1,31 +1,19 @@
-import { z } from "zod";
+import {
+  queryRequestSchema,
+  queryResponseSchema,
+  requireApiBaseUrl,
+} from "@/lib/schemas";
+import type { QueryRequest, QueryResponse } from "@/lib/types";
 
-import type { QueryRequest, QueryResponse, RetrievalStrategy } from "@/lib/types";
-
-const strategySchema = z.enum(["dense", "hybrid", "hybrid_rerank"]);
-
-export const queryRequestSchema = z.object({
-  query: z.string().trim().min(1).max(4000),
-  strategy: strategySchema,
-  top_k: z.number().int().min(1).max(50).optional(),
-  candidate_depth: z.number().int().min(5).max(100).optional(),
-  generate: z.boolean().optional(),
-});
-
-function apiBaseUrl(): string {
-  const base = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-  if (!base) {
-    return "http://localhost:8000";
-  }
-  return base;
-}
+export { STRATEGY_LABELS, STRATEGY_META } from "@/lib/strategies";
 
 /**
  * POST /query — full answer or retrieve-only (generate: false).
+ * Validates both the outbound body and the inbound JSON payload.
  */
 export async function postQuery(body: QueryRequest): Promise<QueryResponse> {
   const parsed = queryRequestSchema.parse(body);
-  const res = await fetch(`${apiBaseUrl()}/query`, {
+  const res = await fetch(`${requireApiBaseUrl()}/query`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(parsed),
@@ -40,11 +28,6 @@ export async function postQuery(body: QueryRequest): Promise<QueryResponse> {
     }
     throw new Error(detail || `Request failed (${res.status})`);
   }
-  return (await res.json()) as QueryResponse;
+  const json: unknown = await res.json();
+  return queryResponseSchema.parse(json);
 }
-
-export const STRATEGY_LABELS: Record<RetrievalStrategy, string> = {
-  dense: "Dense",
-  hybrid: "Hybrid",
-  hybrid_rerank: "Hybrid + rerank",
-};

@@ -59,7 +59,7 @@ Plus honest written analysis: what improved, what it cost, the tradeoff, what yo
 - **Fusion**: Reciprocal Rank Fusion, k=60
 - **Generation**: Claude, structured output for citations
 - **Evals + tracing**: Braintrust
-- **Frontend**: Next.js + Vercel AI SDK + shadcn/ui (customized) + Tailwind
+- **Frontend**: Next.js App Router + Vercel AI SDK (`streamObject` for cited answers) + shadcn/ui (customized) + Tailwind
 - **Deploy**: API on Railway, frontend on Vercel
 
 ## Repo structure

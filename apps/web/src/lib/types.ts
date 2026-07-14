@@ -51,6 +51,10 @@ export type QueryResponse = {
   latency_ms: number | null;
   generate: boolean;
   error: string | null;
+  /** Remaining Claude generations for this visitor today (from API). */
+  per_ip_remaining?: number;
+  /** Remaining shared demo generations today (from API). */
+  global_remaining?: number;
 };
 
 export type QueryRequest = {

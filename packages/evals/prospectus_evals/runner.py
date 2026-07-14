@@ -45,11 +45,13 @@ def run_one_case(
 ) -> dict[str, Any]:
     """Execute retrieve+generate for one case and compute scorers."""
     started = time.perf_counter()
+    # Eval answers can be longer than the public demo cap (1024).
     answer = answer_query(
         case.query,
         strategy=strategy,
         top_k=10 if strategy is not RetrievalStrategy.HYBRID_RERANK else 8,
         candidate_depth=candidate_depth,
+        max_tokens=int(os.getenv("EVAL_ANTHROPIC_MAX_TOKENS", "2048")),
     )
     latency_ms = (time.perf_counter() - started) * 1000.0
 
@@ -116,19 +118,22 @@ def run_one_case(
 
 def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Mean scores, p95 latency, mean cost for a strategy's rows."""
+    ok = [r for r in rows if not r.get("error")]
 
     def mean(key: str) -> float:
-        vals = [r["scores"][key] for r in rows if key in r["scores"]]
+        vals = [r["scores"][key] for r in ok if key in r["scores"]]
         return statistics.fmean(vals) if vals else 0.0
 
-    latencies = sorted(r["latency_ms"] for r in rows)
+    latencies = sorted(r["latency_ms"] for r in ok)
     p95_index = max(0, int(round(0.95 * (len(latencies) - 1)))) if latencies else 0
     p95 = latencies[p95_index] if latencies else 0.0
-    costs = [r["cost"]["total_usd"] for r in rows]
+    costs = [r["cost"]["total_usd"] for r in ok]
 
-    has_faith = any("faithfulness" in r["scores"] for r in rows)
+    has_faith = any("faithfulness" in r["scores"] for r in ok)
     return {
-        "n": len(rows),
+        "n": len(ok),
+        "n_attempted": len(rows),
+        "n_errors": len(rows) - len(ok),
         "recall_at_5": mean("recall_at_5"),
         "recall_at_10": mean("recall_at_10"),
         "mrr": mean("mrr"),
@@ -168,15 +173,53 @@ def run_experiments(
     for strategy in strategies:
         rows: list[dict[str, Any]] = []
         for case in cases:
-            row = run_one_case(
-                case,
-                strategy=strategy,
-                candidate_depth=candidate_depth,
-                judge_faithfulness=judge_faithfulness,
-            )
+            try:
+                row = run_one_case(
+                    case,
+                    strategy=strategy,
+                    candidate_depth=candidate_depth,
+                    judge_faithfulness=judge_faithfulness,
+                )
+            except Exception as exc:  # noqa: BLE001 — keep the suite alive
+                print(f"[{strategy.value}] {case.id}: ERROR {exc}")
+                row = {
+                    "case_id": case.id,
+                    "query": case.query,
+                    "strategy": strategy.value,
+                    "gold": {
+                        "ticker": case.gold_ticker,
+                        "section_id": case.gold_section_id,
+                        "section_title": case.gold_section_title,
+                        "chunk_id": case.gold_chunk_id,
+                    },
+                    "abstained": True,
+                    "confidence": 0.0,
+                    "latency_ms": 0.0,
+                    "retrieval_latency_ms": None,
+                    "cost": {
+                        "embedding_usd": 0.0,
+                        "rerank_usd": 0.0,
+                        "generation_usd": 0.0,
+                        "total_usd": 0.0,
+                    },
+                    "scores": {
+                        "recall_at_5": 0.0,
+                        "recall_at_10": 0.0,
+                        "mrr": 0.0,
+                        "citation_accuracy": 0.0,
+                        "error": str(exc),
+                    },
+                    "answer_text": "",
+                    "citation_count": 0,
+                    "answer": None,
+                    "error": str(exc),
+                }
             rows.append(row)
             faith = row["scores"].get("faithfulness")
             faith_s = f"{faith:.2f}" if faith is not None else "n/a"
+            err = row.get("error")
+            if err:
+                continue
             print(
                 f"[{strategy.value}] {case.id}: "
                 f"r@5={row['scores']['recall_at_5']:.0f} "

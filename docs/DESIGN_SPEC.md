@@ -55,10 +55,10 @@ Clean, text-forward, citation-heavy, fast. Feels like a serious research tool �
    dense-only / hybrid / hybrid+rerank, showing how the retrieved chunks change in real time.
    This makes the eval report *interactive*. Nobody else has this.
 6. **Eval report page** — clean, well-typeset, the three-config comparison table with real
-   numbers and Tremor bar charts. A portfolio artifact in itself.
+   numbers and comparison charts. A portfolio artifact in itself.
 
 ## Component stack
-shadcn/ui (customized) + Tailwind · Tremor (eval charts) · Motion (micro-interactions only:
+shadcn/ui (customized) + Tailwind · Recharts (eval charts) · Motion (micro-interactions only:
 citation drawer slide-in, chunk highlight) · curated lucide icons
 
 ## The test before shipping any screen

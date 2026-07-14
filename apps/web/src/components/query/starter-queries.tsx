@@ -4,18 +4,18 @@ const STARTERS: { label: string; query: string; hint: string }[] = [
   {
     label: "Exact-token win",
     query: "What is CoWoS packaging and which filers discuss it?",
-    hint: "Dense often misses · hybrid / rerank surface NVDA",
-  },
-  {
-    label: "Risk factors",
-    query:
-      "What supply chain or manufacturing risks does NVIDIA discuss in Item 1A?",
-    hint: "Compare how configs rank Item 1A vs Business",
+    hint: "Semantic often misses · keyword modes surface NVDA",
   },
   {
     label: "Should abstain",
     query: "What was Apple’s exact Q3 2019 iPhone unit sales guidance?",
-    hint: "Corpus may lack evidence — abstention is correct",
+    hint: "Corpus may lack evidence; abstention is correct",
+  },
+  {
+    label: "Multi-ticker",
+    query:
+      "How do NVIDIA, TSMC, and AMD describe advanced packaging or foundry capacity risk?",
+    hint: "Compare ranking across issuers when you toggle strategies",
   },
 ];
 
@@ -31,24 +31,26 @@ export function StarterQueries({ onSelect, disabled }: StarterQueriesProps) {
   return (
     <div className="mt-8">
       <p className="mb-3 text-[12px] font-medium tracking-wide text-ink-subtle uppercase">
-        Try a research question
+        Start with a demo question
       </p>
-      <ul className="divide-y divide-border border-y border-border">
+      <ul className="flex flex-col gap-2">
         {STARTERS.map((item) => (
           <li key={item.query}>
             <button
               type="button"
               disabled={disabled}
               onClick={() => onSelect(item.query)}
-              className="group flex w-full flex-col gap-0.5 px-0 py-3.5 text-left transition-colors hover:bg-surface-subtle/80 disabled:opacity-50"
+              className="group w-full rounded-[6px] border border-border bg-surface px-3.5 py-3 text-left transition-colors hover:border-[color-mix(in_srgb,var(--primary)_30%,var(--border))] hover:bg-accent-subtle/40 disabled:opacity-50"
             >
               <span className="text-[12px] font-medium text-primary">
                 {item.label}
               </span>
-              <span className="text-[15px] leading-[1.5] text-ink group-hover:text-ink">
+              <span className="mt-0.5 block text-[14px] leading-[1.45] text-ink">
                 {item.query}
               </span>
-              <span className="text-[12px] text-ink-subtle">{item.hint}</span>
+              <span className="mt-1 block text-[12px] text-ink-subtle">
+                {item.hint}
+              </span>
             </button>
           </li>
         ))}

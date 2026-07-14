@@ -1,16 +1,10 @@
 "use client";
 
+import { STRATEGY_META } from "@/lib/strategies";
 import type { RetrievalStrategy } from "@/lib/types";
-import { STRATEGY_LABELS } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const OPTIONS: RetrievalStrategy[] = ["dense", "hybrid", "hybrid_rerank"];
-
-const HINTS: Record<RetrievalStrategy, string> = {
-  dense: "Semantic similarity only (pgvector)",
-  hybrid: "Dense + keyword fused with RRF",
-  hybrid_rerank: "Hybrid pool, then Cohere rerank",
-};
 
 type StrategyToggleProps = {
   value: RetrievalStrategy;
@@ -19,18 +13,20 @@ type StrategyToggleProps = {
 };
 
 /**
- * Live retrieval-config control — the demo moment.
+ * Live retrieval-config control — plain labels first, technical name underneath.
  */
 export function StrategyToggle({
   value,
   onChange,
   disabled,
 }: StrategyToggleProps) {
+  const meta = STRATEGY_META[value];
+
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] font-medium tracking-wide text-ink-subtle uppercase">
-          Live config
+          Search mode
         </span>
         <div
           className="inline-flex rounded-[6px] border border-border bg-surface p-0.5"
@@ -45,6 +41,7 @@ export function StrategyToggle({
                 type="button"
                 disabled={disabled}
                 onClick={() => onChange(option)}
+                title={STRATEGY_META[option].technical}
                 className={cn(
                   "rounded-[4px] px-2.5 py-1 text-[12px] font-medium transition-colors",
                   active
@@ -53,13 +50,16 @@ export function StrategyToggle({
                   disabled && "opacity-50"
                 )}
               >
-                {STRATEGY_LABELS[option]}
+                {STRATEGY_META[option].plain}
               </button>
             );
           })}
         </div>
       </div>
-      <p className="text-[12px] text-ink-subtle">{HINTS[value]}</p>
+      <p className="max-w-md text-[12px] leading-[1.45] text-ink-subtle">
+        {meta.hint}{" "}
+        <span className="text-ink-subtle/80">({meta.technical})</span>
+      </p>
     </div>
   );
 }

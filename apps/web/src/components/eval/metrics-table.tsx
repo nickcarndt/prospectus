@@ -7,12 +7,11 @@ type MetricsTableProps = {
 };
 
 function formatCell(value: Cell): ReactNode {
+  // Primary tables should only receive measured numbers. String/null cells
+  // render as n/a (never fake credit placeholders in the hero comparison).
   if (value == null) return <span className="text-ink-subtle">n/a</span>;
   if (typeof value === "string") {
-    if (value.startsWith("n/a")) {
-      return <span className="text-ink-subtle">{value}</span>;
-    }
-    return value;
+    return <span className="text-ink-subtle">n/a</span>;
   }
   return (
     <span className="tabular-nums">
@@ -32,13 +31,22 @@ export function MetricsTable({ rows }: MetricsTableProps) {
           <tr className="border-b border-border bg-surface-subtle">
             <th className="px-4 py-2.5 font-medium text-ink-muted">Metric</th>
             <th className="px-4 py-2.5 text-right font-medium text-ink-muted">
-              dense
+              <span className="text-ink">Semantic</span>
+              <span className="mt-0.5 block text-[11px] font-normal">
+                dense
+              </span>
             </th>
             <th className="px-4 py-2.5 text-right font-medium text-ink-muted">
-              hybrid
+              <span className="text-ink">Keyword + semantic</span>
+              <span className="mt-0.5 block text-[11px] font-normal">
+                hybrid
+              </span>
             </th>
             <th className="px-4 py-2.5 text-right font-medium text-ink-muted">
-              hybrid_rerank
+              <span className="text-ink">Best match</span>
+              <span className="mt-0.5 block text-[11px] font-normal">
+                hybrid+rerank
+              </span>
             </th>
           </tr>
         </thead>

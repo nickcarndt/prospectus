@@ -68,6 +68,19 @@ class GenerateBudget:
             self._per_ip.clear()
             self._global = 0
 
+    def peek(self, client_key: str) -> GenerateBudgetDecision:
+        """Return remaining quota without consuming a slot."""
+        key = (client_key or "unknown").strip() or "unknown"
+        with self._lock:
+            self._roll_day_locked()
+            used_ip = self._per_ip.get(key, 0)
+            return GenerateBudgetDecision(
+                allowed=used_ip < self.per_ip_per_day
+                and self._global < self.global_per_day,
+                per_ip_remaining=max(0, self.per_ip_per_day - used_ip),
+                global_remaining=max(0, self.global_per_day - self._global),
+            )
+
     def check_and_consume(self, client_key: str) -> GenerateBudgetDecision:
         """Atomically allow one generate call or return a denial reason.
 
