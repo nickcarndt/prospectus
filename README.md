@@ -3,6 +3,17 @@
 Hybrid-retrieval research system over SEC filings: dense · hybrid (RRF) · hybrid+rerank,
 with cited generation (or abstention) and a published eval report.
 
+## Live
+
+| Surface | URL |
+|---------|-----|
+| App | https://prospectus-nickarndt.vercel.app |
+| Eval report | https://prospectus-nickarndt.vercel.app/eval |
+| API health | https://api-production-0bd1.up.railway.app/health |
+| Source | https://github.com/nickcarndt/prospectus |
+
+Generation requires Anthropic credits on the API; retrieval (dense / hybrid / hybrid+rerank) works without them.
+
 ## Stack
 
 | Layer | Tech |
