@@ -113,3 +113,26 @@ def test_query_rejects_oversized_top_k_at_http(client: TestClient) -> None:
         json={"query": "x", "top_k": 999, "generate": False},
     )
     assert response.status_code == 422
+
+
+def test_query_retrieval_rate_limit_returns_429(client: TestClient) -> None:
+    """Exhausted retrieval budget must 429 before calling providers."""
+    from app.rate_limit import BudgetDecision
+
+    denied = BudgetDecision(
+        allowed=False,
+        reason="Daily retrieval limit for this visitor reached (1/day).",
+        per_ip_remaining=0,
+        global_remaining=10,
+    )
+    with (
+        patch("app.main.retrieval_budget.check_and_consume", return_value=denied),
+        patch("app.main.retrieve") as retrieve_mock,
+    ):
+        response = client.post(
+            "/query",
+            json={"query": "CoWoS", "strategy": "dense", "generate": False},
+        )
+    assert response.status_code == 429
+    assert "retrieval" in response.json()["detail"].lower()
+    retrieve_mock.assert_not_called()

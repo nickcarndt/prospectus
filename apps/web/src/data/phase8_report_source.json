@@ -1,42 +1,45 @@
 {
   "report": "EVAL_REPORT.md",
-  "generated_at": "2026-07-14T22:29:21.756964+00:00",
+  "generated_at": "2026-07-14T23:27:23.353845+00:00",
   "candidate_depth": 50,
   "eval_set_n": 35,
   "sources": {
-    "full_generation_eval": "data/eval/results/latest.json"
+    "retrieval_only_eval": "data/eval/results/latest_retrieval_only.json",
+    "results_digest": "data/eval/RESULTS_DIGEST.json",
+    "full_generation_eval_prior": "data/eval/results/eval_20260714T222900Z.json"
   },
   "limitations": {
     "generation_incomplete": false,
     "anthropic_credits_exhausted": false,
-    "recall_at_5_equals_recall_at_10": "Corpus/gold artifact, not a scorer bug: binary section hit-rate \u2014 when gold is found it is almost always already in top-5, so R@10 adds no new hits. Use MRR to compare ranking quality."
+    "gold_relabel_2026_07_14": "Section-mismatched golds corrected (Item 1A/1C, invalid section ids). Retrieval metrics below are from the post-relabel retrieval-only run. Citation/faithfulness numbers remain from the prior full e2e (eval_20260714T222900Z); a fresh full generation suite is deferred.",
+    "recall_at_5_equals_recall_at_10": "Mostly still true for dense/hybrid on this set; hybrid_rerank now shows R@5=0.943 vs R@10=0.971 (one gold lands in 6\u201310). Prefer MRR for ranking."
   },
   "retrieval_only": {
     "dense": {
       "n": 35,
-      "recall_at_5": 0.8285714285714286,
-      "recall_at_10": 0.8285714285714286,
-      "mrr": 0.6838095238095239,
-      "latency_ms_mean": 536.14,
-      "latency_ms_p95": 676.0,
+      "recall_at_5": 0.9714285714285714,
+      "recall_at_10": 0.9714285714285714,
+      "mrr": 0.8447619047619047,
+      "latency_ms_mean": 390.1437677991843,
+      "latency_ms_p95": 613.0637080059387,
       "cost_usd_mean_retrieval": 5.2e-06
     },
     "hybrid": {
       "n": 35,
-      "recall_at_5": 0.8285714285714286,
-      "recall_at_10": 0.8285714285714286,
-      "mrr": 0.6242857142857143,
-      "latency_ms_mean": 359.46,
-      "latency_ms_p95": 435.0,
+      "recall_at_5": 0.9714285714285714,
+      "recall_at_10": 0.9714285714285714,
+      "mrr": 0.7552380952380953,
+      "latency_ms_mean": 327.23950242964617,
+      "latency_ms_p95": 452.9551250016084,
       "cost_usd_mean_retrieval": 5.2e-06
     },
     "hybrid_rerank": {
       "n": 35,
-      "recall_at_5": 0.8285714285714286,
-      "recall_at_10": 0.8285714285714286,
-      "mrr": 0.62,
-      "latency_ms_mean": 1054.64,
-      "latency_ms_p95": 1725.6,
+      "recall_at_5": 0.9428571428571428,
+      "recall_at_10": 0.9714285714285714,
+      "mrr": 0.7271428571428571,
+      "latency_ms_mean": 761.6798487412909,
+      "latency_ms_p95": 848.7444579950534,
       "cost_usd_mean_retrieval": 0.0010052
     }
   },
@@ -68,19 +71,19 @@
   },
   "table_display": {
     "recall_at_5": {
-      "dense": 0.829,
-      "hybrid": 0.829,
-      "hybrid_rerank": 0.829
+      "dense": 0.971,
+      "hybrid": 0.971,
+      "hybrid_rerank": 0.943
     },
     "recall_at_10": {
-      "dense": 0.829,
-      "hybrid": 0.829,
-      "hybrid_rerank": 0.829
+      "dense": 0.971,
+      "hybrid": 0.971,
+      "hybrid_rerank": 0.971
     },
     "mrr": {
-      "dense": 0.684,
-      "hybrid": 0.624,
-      "hybrid_rerank": 0.62
+      "dense": 0.845,
+      "hybrid": 0.755,
+      "hybrid_rerank": 0.727
     },
     "citation_accuracy": {
       "dense": 1.0,
@@ -103,9 +106,9 @@
       "hybrid_rerank": 0.01880951428571429
     },
     "p95_latency_ms_retrieval": {
-      "dense": 676.0,
-      "hybrid": 435.0,
-      "hybrid_rerank": 1725.6
+      "dense": 613,
+      "hybrid": 453,
+      "hybrid_rerank": 849
     },
     "cost_usd_per_query_retrieval": {
       "dense": 5.2e-06,
@@ -121,5 +124,10 @@
     "phase5_cowos_rerank": {
       "finding": "Rerank can reorder the hybrid pool; check live with Exact-token win."
     }
+  },
+  "digest": {
+    "path": "data/eval/RESULTS_DIGEST.json",
+    "results_sha256": "7cc91ac42764aa133745b81de5e579e88134a7083e0797ad1fe7f6902f5750b0",
+    "cases_sha256": "bfd7e324d31c07ca75e492745f3b49481a4b9bd2962bf085ebfe1b842fcd7037"
   }
 }

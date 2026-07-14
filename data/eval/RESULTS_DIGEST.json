@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-14T23:27:23.324614+00:00",
+  "cases": {
+    "path": "data/eval/cases.jsonl",
+    "sha256": "bfd7e324d31c07ca75e492745f3b49481a4b9bd2962bf085ebfe1b842fcd7037",
+    "n": 35
+  },
+  "results": {
+    "path": "data/eval/results/latest_retrieval_only.json",
+    "sha256": "7cc91ac42764aa133745b81de5e579e88134a7083e0797ad1fe7f6902f5750b0",
+    "bytes": 55510,
+    "run_id": null,
+    "case_count": 35,
+    "candidate_depth": 50
+  },
+  "aggregates": {
+    "dense": {
+      "n": 35,
+      "recall_at_5": 0.9714285714285714,
+      "recall_at_10": 0.9714285714285714,
+      "mrr": 0.8447619047619047,
+      "latency_ms_p95": 613.0637080059387,
+      "cost_usd_mean": 5.2e-06
+    },
+    "hybrid": {
+      "n": 35,
+      "recall_at_5": 0.9714285714285714,
+      "recall_at_10": 0.9714285714285714,
+      "mrr": 0.7552380952380953,
+      "latency_ms_p95": 452.9551250016084,
+      "cost_usd_mean": 5.2e-06
+    },
+    "hybrid_rerank": {
+      "n": 35,
+      "recall_at_5": 0.9428571428571428,
+      "recall_at_10": 0.9714285714285714,
+      "mrr": 0.7271428571428571,
+      "latency_ms_p95": 848.7444579950534,
+      "cost_usd_mean": 0.0010052
+    }
+  },
+  "verify": "sha256sum <results.path> must equal results.sha256; aggregates must match EVAL_REPORT.md / phase8_report_source.json"
+}

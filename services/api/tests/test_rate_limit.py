@@ -1,8 +1,8 @@
-"""Unit tests for generation budget counters."""
+"""Unit tests for generation and retrieval budget counters."""
 
 from __future__ import annotations
 
-from app.rate_limit import GenerateBudget
+from app.rate_limit import GenerateBudget, RetrievalBudget
 
 
 def test_per_ip_budget_exhausts() -> None:
@@ -43,3 +43,11 @@ def test_peek_does_not_consume() -> None:
     assert second.per_ip_remaining == 2
     budget.check_and_consume("ip")
     assert budget.peek("ip").per_ip_remaining == 1
+
+
+def test_retrieval_budget_exhausts_per_ip() -> None:
+    budget = RetrievalBudget(per_ip_per_day=1, global_per_day=100)
+    assert budget.check_and_consume("ip").allowed is True
+    denied = budget.check_and_consume("ip")
+    assert denied.allowed is False
+    assert "retrieval" in (denied.reason or "").lower()

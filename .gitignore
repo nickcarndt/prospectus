@@ -41,3 +41,4 @@ data/eval/results/
 !data/chunks/.gitkeep
 !data/eval/.gitkeep
 !data/eval/cases.jsonl
+!data/eval/RESULTS_DIGEST.json

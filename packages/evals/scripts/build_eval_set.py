@@ -1,5 +1,10 @@
 """Build data/eval/cases.jsonl from labeled question templates + live DB gold rows.
 
+WARNING: Phrase ILIKE lookup is a bootstrap helper, not a labeling policy.
+`data/eval/cases.jsonl` is the curated source of truth (section-correct golds).
+Do not regenerate and commit from this script without manually verifying every
+section_id — ILIKE will happily gold Item 1A questions onto Item 1 Business.
+
 Run:
   PYTHONPATH=packages/evals:... python packages/evals/scripts/build_eval_set.py
 """

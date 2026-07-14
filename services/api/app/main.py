@@ -21,7 +21,7 @@ from prospectus_retrieval.retrieve import retrieve
 from prospectus_shared import Answer, Citation, RetrievalResult, RetrievalStrategy
 from pydantic import BaseModel, Field, field_validator
 
-from app.rate_limit import generate_budget
+from app.rate_limit import generate_budget, retrieval_budget
 
 # Load repo-root .env when running locally (Railway injects env directly).
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -138,13 +138,26 @@ def _cors_origins() -> list[str]:
 
 
 def _client_key(request: Request) -> str:
-    """Best-effort client id for budgets (Railway/Vercel forward real IP)."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    """Trusted client IP for rate limits (not spoofable XFF prefix).
+
+    Prefer platform-set ``X-Real-IP`` (Railway overwrites this at the edge).
+    If only ``X-Forwarded-For`` is present, use the *rightmost* hop — the
+    value appended by the trusted proxy. Never use the leftmost XFF entry;
+    clients can prepend arbitrary addresses.
+    """
     real_ip = request.headers.get("x-real-ip")
     if real_ip:
-        return real_ip.strip()
+        # Starlette may join duplicate headers with commas; take the last.
+        part = real_ip.split(",")[-1].strip()
+        if part:
+            return part
+
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+        if parts:
+            return parts[-1]
+
     if request.client and request.client.host:
         return request.client.host
     return "unknown"
@@ -345,6 +358,15 @@ def query_endpoint(body: QueryRequest, request: Request) -> QueryResponse:
     top_k = _retrieval_top_k(body.top_k)
     candidate_depth = _retrieval_candidate_depth(body.candidate_depth)
     client_key = _client_key(request)
+
+    # Every /query path embeds (and may Cohere-rerank). Cap before spend.
+    retrieval_decision = retrieval_budget.check_and_consume(client_key)
+    if not retrieval_decision.allowed:
+        raise HTTPException(
+            status_code=429,
+            detail=retrieval_decision.reason
+            or "Retrieval rate limit exceeded.",
+        )
 
     if not body.generate:
         return _retrieve_only(

@@ -15,9 +15,10 @@ with cited generation (or abstention) and a published eval report.
 > GitHub user is **`nickcarndt`**. The Vercel hostname uses the Vercel team slug
 > `nickarndt` — that is not a typo in the GitHub URL.
 
-Retrieval (dense / hybrid / hybrid+rerank) is free for the public demo. Cited
-generation is opt-in and budgeted on the API (`GENERATE_PER_IP_PER_DAY=3`,
-`GENERATE_GLOBAL_PER_DAY=12` by default).
+Public demo is budgeted on the API: retrieval (`RETRIEVAL_PER_IP_PER_DAY=100`,
+`RETRIEVAL_GLOBAL_PER_DAY=2000`) and cited generation (`GENERATE_PER_IP_PER_DAY=3`,
+`GENERATE_GLOBAL_PER_DAY=12`). Client identity uses platform `X-Real-IP` / rightmost
+`X-Forwarded-For` (not a spoofable XFF prefix).
 
 ## Stack
 
