@@ -11,7 +11,8 @@ from prospectus_shared import Chunk, RetrievalResult
 from prospectus_generation.llm_schema import StructuredGeneration
 
 DEFAULT_MODEL = "claude-sonnet-4-5"
-DEFAULT_MAX_TOKENS = 2048
+# Cap output for the public demo — cited answers rarely need 2k tokens.
+DEFAULT_MAX_TOKENS = 1024
 
 
 def resolve_model(model: str | None = None) -> str:

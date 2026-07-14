@@ -7,11 +7,15 @@ import { CitationDrawer } from "@/components/query/citation-drawer";
 import { QueryInput } from "@/components/query/query-input";
 import { RetrievedChunks } from "@/components/query/retrieved-chunks";
 import { StrategyToggle } from "@/components/query/strategy-toggle";
+import { Button } from "@/components/ui/button";
 import { postQuery } from "@/lib/api";
 import type { Citation, Chunk, QueryResponse, RetrievalStrategy } from "@/lib/types";
 
 /**
- * Research workspace — query → cited answer → strategy toggle re-retrieves.
+ * Research workspace — search retrieves for free; cited answers are opt-in.
+ *
+ * Claude spend is budgeted on the API for the public LinkedIn demo. Strategy
+ * toggles always re-retrieve only (no generation).
  */
 export function ResearchWorkspace() {
   const [strategy, setStrategy] = useState<RetrievalStrategy>("hybrid_rerank");
@@ -19,12 +23,14 @@ export function ResearchWorkspace() {
   const [lastQuery, setLastQuery] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [pendingGenerate, setPendingGenerate] = useState(false);
   const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const runQuery = useCallback(
     (query: string, nextStrategy: RetrievalStrategy, generate: boolean) => {
       setError(null);
+      setPendingGenerate(generate);
       startTransition(async () => {
         try {
           const response = await postQuery({
@@ -39,6 +45,8 @@ export function ResearchWorkspace() {
           }
         } catch (err) {
           setError(err instanceof Error ? err.message : "Request failed");
+        } finally {
+          setPendingGenerate(false);
         }
       });
     },
@@ -46,7 +54,13 @@ export function ResearchWorkspace() {
   );
 
   function handleSubmit(query: string) {
-    runQuery(query, strategy, true);
+    // Retrieve only — LinkedIn visitors can explore without burning Claude.
+    runQuery(query, strategy, false);
+  }
+
+  function handleGenerate() {
+    if (!lastQuery) return;
+    runQuery(lastQuery, strategy, true);
   }
 
   function handleStrategyChange(next: RetrievalStrategy) {
@@ -69,13 +83,19 @@ export function ResearchWorkspace() {
         ) ?? null)
       : null;
 
-  // Hide answer panel on retrieve-only toggles and generation transport errors
-  // (those still surface chunks + the error banner).
   const showAnswer =
     !!result &&
     result.generate &&
     !result.error &&
     (result.answer_text.length > 0 || result.abstained);
+
+  const canGenerate =
+    !!lastQuery &&
+    !!result?.retrieval &&
+    result.retrieval.chunks.length > 0 &&
+    !isPending;
+
+  const hasCitedAnswer = showAnswer && !result?.abstained;
 
   return (
     <div className="mx-auto w-full max-w-[720px] px-6 py-12 md:py-16">
@@ -84,8 +104,9 @@ export function ResearchWorkspace() {
           Prospectus
         </h1>
         <p className="mt-2 max-w-xl text-[15px] leading-[1.6] text-ink-muted">
-          Grounded research over SEC filings. Every claim cites a source —
-          or we abstain.
+          Grounded research over SEC filings. Search and compare retrieval
+          configs freely — cited answers use a shared daily budget so the
+          public demo lasts.
         </p>
       </header>
 
@@ -98,7 +119,7 @@ export function ResearchWorkspace() {
         {result?.latency_ms != null && (
           <span className="text-[12px] text-ink-subtle tabular-nums">
             {Math.round(result.latency_ms)} ms e2e
-            {result.confidence > 0 && (
+            {result.generate && result.confidence > 0 && (
               <> · confidence {result.confidence.toFixed(2)}</>
             )}
           </span>
@@ -108,12 +129,30 @@ export function ResearchWorkspace() {
       <QueryInput onSubmit={handleSubmit} disabled={isPending} />
 
       {isPending && (
-        <p className="mt-6 text-[13px] text-ink-subtle">Searching filings…</p>
+        <p className="mt-6 text-[13px] text-ink-subtle">
+          {pendingGenerate ? "Writing cited answer…" : "Searching filings…"}
+        </p>
       )}
 
       {error && (
         <div className="mt-6 rounded-[6px] border border-border bg-warning-bg px-4 py-3 text-[13px] text-warning">
           {error}
+        </div>
+      )}
+
+      {canGenerate && !hasCitedAnswer && (
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            onClick={handleGenerate}
+            disabled={isPending}
+            className="rounded-[6px] bg-primary text-primary-foreground hover:bg-[var(--accent-hover)]"
+          >
+            Generate cited answer
+          </Button>
+          <p className="text-[12px] text-ink-subtle">
+            Uses Claude (limited per visitor / day). Retrieval above is free.
+          </p>
         </div>
       )}
 
@@ -150,8 +189,8 @@ export function ResearchWorkspace() {
       {!result?.generate && lastQuery && result?.retrieval && (
         <p className="mt-8 text-[13px] text-ink-muted">
           Showing retrieval for{" "}
-          <span className="font-medium text-ink">{strategy}</span> — submit
-          again to regenerate an answer with this strategy.
+          <span className="font-medium text-ink">{strategy}</span> — toggle
+          configs to compare ranking, or generate a cited answer.
         </p>
       )}
 

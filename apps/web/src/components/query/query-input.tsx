@@ -59,7 +59,8 @@ export function QueryInput({
         </Button>
       </div>
       <p className="mt-2 text-[12px] text-ink-subtle">
-        Enter to search · Shift+Enter for newline
+        Enter to search filings · Shift+Enter for newline · cited answers are
+        opt-in
       </p>
     </form>
   );

@@ -12,7 +12,9 @@ with cited generation (or abstention) and a published eval report.
 | API health | https://api-production-0bd1.up.railway.app/health |
 | Source | https://github.com/nickcarndt/prospectus |
 
-Generation requires Anthropic credits on the API; retrieval (dense / hybrid / hybrid+rerank) works without them.
+Retrieval (dense / hybrid / hybrid+rerank) is unlimited. Cited generation is
+opt-in in the UI and budgeted on the API (`GENERATE_PER_IP_PER_DAY=3`,
+`GENERATE_GLOBAL_PER_DAY=12` by default) so a public demo can last on modest credits.
 
 ## Stack
 
