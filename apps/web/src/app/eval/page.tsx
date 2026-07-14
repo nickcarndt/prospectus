@@ -149,10 +149,11 @@ export default function EvalReportPage() {
         </p>
         <p className="mt-2 text-[16px] leading-[1.55] font-medium text-ink">
           Semantic search ranks the right filing section highest overall (MRR
-          0.684). Keyword + semantic does not beat it on average recall, but it
-          still wins on rare exact terms (e.g. CoWoS). Best-match reranking is
-          slower at retrieval, yet posted perfect citation accuracy and the
-          highest faithfulness (1.000) on this full run.
+          0.845). Keyword + semantic does not beat it on average recall (both
+          R@5 0.971), but it still wins on rare exact terms (e.g. CoWoS).
+          Best-match reranking is slower at retrieval, yet posted perfect
+          citation accuracy and the highest faithfulness (1.000) on this full
+          run.
         </p>
         <p className="mt-2 text-[13px] leading-[1.5] text-ink-muted">
           That is the honest result, not a marketing chart. Details below.
@@ -179,8 +180,9 @@ export default function EvalReportPage() {
           <span className="text-ink">binary section hit-rate</span>: did any
           chunk from the gold ticker+section appear in the top-k? On this set,
           when the gold section is found it is almost always already inside the
-          top-5, so widening to top-10 adds no new hits. That is why every
-          config shows R@5 = R@10 = 0.829 (29/35). The metric that{" "}
+          top-5, so widening to top-10 adds no new hits. That is why dense and
+          hybrid both show R@5 = R@10 = 0.971 (34/35); hybrid+rerank is close
+          (R@5 0.943, R@10 0.971). The metric that{" "}
           <span className="text-ink">does</span> separate configs is{" "}
           <span className="font-medium text-ink">MRR</span> (how high the first
           gold hit ranks).
