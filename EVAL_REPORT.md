@@ -1,8 +1,10 @@
 # Prospectus Eval Report
 
-Reproducible head-to-head of three retrieval configs on the labeled SEC eval set
-(`data/eval/cases.jsonl`, n=35). Every number below is sourced from measured run
-artifacts. Sealed digest:
+Single-run head-to-head of three retrieval configs on a 35-question labeled SEC
+eval set (`data/eval/cases.jsonl`). Retrieval metrics are deterministic and
+digest-sealed; generation and judge metrics are one stochastic pass. This is a
+methodology demonstration at n=35, not a statistically powered comparison. Every
+number below is sourced from measured run artifacts. Sealed digest:
 [`data/eval/RESULTS_DIGEST.json`](data/eval/RESULTS_DIGEST.json)
 (SHA-256 of the retrieval-only artifact + cases + aggregates). Web snapshot:
 [`apps/web/src/data/phase8_report_source.json`](apps/web/src/data/phase8_report_source.json).
@@ -72,6 +74,13 @@ Citation/faithfulness/e2e latency+cost from prior full e2e
 4. Aggregate recall ties **do not** mean hybrid/rerank are useless. See qualitative
    CoWoS demos below (exact rare tokens).
 5. E2e `$/q` is the eval harness cost estimate, not a Stripe invoice.
+6. **Single run, no variance estimates.** Each configuration was measured once;
+   the faithfulness judge is one uncalibrated claude-sonnet pass per answer.
+   Ordinal gaps (e.g. ~0.09 MRR, ~3-case faithfulness margins) have not been
+   tested against run-to-run variance.
+7. Run artifacts under `data/eval/results/` are local-only (gitignored); the
+   committed record is `RESULTS_DIGEST.json`, which embeds the aggregate
+   snapshot and the SHA-256 the verify script checks after a regenerated run.
 
 ---
 
@@ -89,7 +98,8 @@ with the same R@10 — one gold lands outside top-5 after rerank.
 
 **MRR still favors dense:** dense **0.845** > hybrid **0.755** > hybrid_rerank
 **0.727**. RRF and Cohere reshuffle ranks; on this set they do not beat dense-alone
-on average reciprocal rank of the gold chunk.
+on average reciprocal rank of the gold chunk. The ~0.09 MRR gap is from a
+single pass and has not been tested against run-to-run variance.
 
 **Generation (prior full n=35 × 3):** citation accuracy **1.000** for every config.
 Faithfulness: dense **0.900**, hybrid **0.857**, hybrid_rerank **1.000**.
@@ -116,7 +126,8 @@ does not move.
 | E2E (prior full run) | p95 ~26–30 s | ~$0.019–0.022 /q est. |
 
 On this set, **hybrid_rerank paid ~$0.001/query** for **no R@10 gain vs dense**, a
-slight R@5 dip, and lower MRR, while prior e2e faithfulness was highest. Keep the
+slight R@5 dip, and lower MRR, while prior e2e faithfulness was highest on that
+run's single judge pass (a ~3-case margin at n=35). Keep the
 CoWoS evidence in mind before scrapping rerank.
 
 ### What we'd optimize next (deferred — freeze)

@@ -134,7 +134,7 @@ export default function EvalReportPage() {
           Eval report
         </p>
         <h1 className="mt-1 text-[30px] font-semibold tracking-tight text-ink">
-          Which search mode wins?
+          Which search mode wins on this 35-question set?
         </h1>
         <p className="mt-3 text-[15px] leading-[1.6] text-ink-muted">
           Measured on {report.eval_set_n} labeled SEC questions. Full retrieve +
@@ -148,15 +148,19 @@ export default function EvalReportPage() {
           Verdict
         </p>
         <p className="mt-2 text-[16px] leading-[1.55] font-medium text-ink">
-          Semantic search ranks the right filing section highest overall (MRR
+          On a single n=35 pass: Semantic search ranks the right filing section highest overall (MRR
           0.845). Keyword + semantic does not beat it on average recall (both
           R@5 0.971), but it still wins on rare exact terms (e.g. CoWoS).
-          Best-match reranking is slower at retrieval, yet posted perfect
-          citation accuracy and the highest faithfulness (1.000) on this full
-          run.
+          Best-match reranking is slower at retrieval; all three configs
+          posted perfect citation accuracy, and reranking had the highest
+          faithfulness (1.000) on this run&apos;s judge pass.
         </p>
         <p className="mt-2 text-[13px] leading-[1.5] text-ink-muted">
           That is the honest result, not a marketing chart. Details below.
+        </p>
+        <p className="mt-2 text-[13px] leading-[1.5] text-ink-muted">
+          Caveat: generation metrics come from the pre-relabel full run;
+          retrieval metrics are post-relabel. See EVAL_REPORT.md limitations.
         </p>
       </section>
 
@@ -204,7 +208,7 @@ export default function EvalReportPage() {
         />
         <ComparisonChart
           title="Is the answer grounded?"
-          subtitle="Citation accuracy and faithfulness after full generation (n=35 per config)."
+          subtitle="Citation accuracy and faithfulness after full generation (n=35 per config, from the prior pre-relabel full run)."
           data={genQualityData}
           format="ratio"
         />
