@@ -243,6 +243,108 @@ export default function EvalReportPage() {
         </div>
       </section>
 
+      <section className="mb-12">
+        <h2 className="mb-3 text-[20px] font-semibold text-ink">
+          Plain-language glossary
+        </h2>
+        <div className="rounded-[6px] border border-border bg-surface px-5 py-4">
+          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-primary">
+            The three search modes
+          </h3>
+          <dl className="mt-2 space-y-2 text-[14px] leading-[1.6]">
+            <div>
+              <dt className="font-medium text-ink">Semantic (dense)</dt>
+              <dd className="text-ink-muted">
+                Searches by meaning. Finds passages that say the same thing even
+                when they use different words.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">Keyword + semantic (hybrid)</dt>
+              <dd className="text-ink-muted">
+                Runs meaning-based search and exact-word search, then merges the
+                two lists. Catches rare exact terms — tickers, part names —
+                that meaning-search can miss.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">
+                Best-match reranking (hybrid_rerank)
+              </dt>
+              <dd className="text-ink-muted">
+                Hybrid search, then a second model re-reads the shortlist and
+                re-orders it by relevance. Slower, sometimes sharper.
+              </dd>
+            </div>
+          </dl>
+
+          <h3 className="mt-5 text-[13px] font-semibold uppercase tracking-wide text-primary">
+            The metrics
+          </h3>
+          <dl className="mt-2 space-y-2 text-[14px] leading-[1.6]">
+            <div>
+              <dt className="font-medium text-ink">Recall@5 / Recall@10</dt>
+              <dd className="text-ink-muted">
+                &ldquo;Was the right passage in the top 5 (or 10) results?&rdquo;
+                1.000 means every question had its answer somewhere in the
+                shortlist.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">MRR (mean reciprocal rank)</dt>
+              <dd className="text-ink-muted">
+                How close to the #1 spot the right passage lands. 1.0 means it
+                was always first; 0.5 means second on average. Higher is better.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">Citation accuracy</dt>
+              <dd className="text-ink-muted">
+                Does each citation in the answer point to a real passage that
+                actually contains the quoted evidence? Checked by code, not by
+                opinion.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">Faithfulness</dt>
+              <dd className="text-ink-muted">
+                Does the written answer stick to what the sources say? Scored by
+                a separate AI judge comparing the answer against the passages it
+                cited.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">p95 latency</dt>
+              <dd className="text-ink-muted">
+                95 out of 100 searches finish within this time.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">n=35</dt>
+              <dd className="text-ink-muted">
+                Everything here was measured on the same 35 questions with
+                known-correct answers.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">Abstention</dt>
+              <dd className="text-ink-muted">
+                When the evidence is too weak, the system says &ldquo;not
+                established in these documents&rdquo; instead of guessing.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-ink">Sealed digest</dt>
+              <dd className="text-ink-muted">
+                A public fingerprint (checksum) of the results file, committed
+                to the repo — so the numbers above can&apos;t be quietly edited
+                after the fact.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
       <section className="mb-8">
         <h2 className="mb-3 text-[15px] font-semibold text-ink">
           Per-config means
